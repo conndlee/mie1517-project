@@ -10,7 +10,7 @@ from ultralytics import YOLO
 
 classes_det = ["Human face"]
 classes_class = ["Glasses", "No Glasses", "Safety Glasses"]
-modelpath = './checkpointing/yolov5su_faces_best.pt'
+modelpath = './yolov5su_faces_best.pt'
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
