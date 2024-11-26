@@ -1,16 +1,31 @@
 
 import cv2 as cv
-import numpy as np
+# import numpy as np
+import torch
+import torchvision
+import torchvision.transforms as transforms
 
 from video_lib import *
 from ultralytics import YOLO
 
-classes = ["Human face"]
-modelpath = './checkpointing/yolov5su_faces_best.pt'
+classes_det = ["Human face"]
+classes_class = ["Glasses", "No Glasses", "Safety Glasses"]
+modelpath = './yolov5su_faces_best.pt'
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    ])
 
 if __name__ == "__main__":
-    capture = open_video()
+    capture = open_video(1) # probably 0
     detection_model = YOLO(modelpath)
+    classifier = FCCNet()
+    state = torch.load("./model_FCClassifier_bs64_lr0.01_epoch14", map_location=device, weights_only=True)
+    classifier.load_state_dict(state)
+    classifier.eval()
+    classifier.to(device)
+    alexnet = torchvision.models.alexnet(pretrained=True).to(device)
 
     while 1:
         ret, frame = capture.read()
@@ -18,43 +33,51 @@ if __name__ == "__main__":
             print("Error: Unable to read frame.")
             break
 
-        height, width, _ = frame.shape
-        blob = cv.dnn.blobFromImage(frame, 1/255, (640, 640), (0, 0, 0), True, crop=False)
+        det_results = detection_model.predict(frame, save=False)
 
-        det_results = detection_model.predict(blob)
-
-        bounding_boxes = []
+        bboxes_toclass = []
+        bboxes_todraw = []
         confidences = []
         class_ids = []
-        for result in det_results:
-            for detection in result:
-                scores = detection[5:]
-                class_id = np.argmax(scores)
-                confidence = scores[class_id]
 
-                if confidence > 0.5:
-                    center_x   = int(detection[0] * width)
-                    center_y   = int(detection[1] * height)
-                    box_width  = int(detection[2] * width)
-                    box_height = int(detection[3] * height)
+        results = det_results[0]
+        for box in results.boxes:
+            x1, y1, x2, y2 = box.xyxy.tolist()[0]
+            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+            x, y, w, h = box.xywh.tolist()[0]
+            x, y, w, h = int(x), int(y), int(w), int(h)
+            conf = box.conf.item()
+            class_id = int(box.cls.item())
 
-                    x = int(center_x - box_width / 2)
-                    y = int(center_y - box_height / 2)
+            if conf > 0.5:
+                bboxes_toclass.append([x1,y1,x2,y2])
+                bboxes_todraw.append([x, y, w, h])
+                confidences.append(float(conf))
+                class_ids.append(class_id)
 
-                    bounding_boxes.append([x, y, box_width, box_height])
-                    confidences.append(float(confidence))
-                    class_ids.append(class_id)
-
-        indexes = cv.dnn.NMSBoxes(bounding_boxes, confidences, 0.5, 0.4)
-        for i in indexes.flatten():
-            x, y, w, h = bounding_boxes[i]
-            label = str(classes[class_ids[i]])
+        indices = cv.dnn.NMSBoxes(bboxes_toclass, confidences, 0.5, 0.4)
+        for i in indices:
+            x1, y1, x2, y2 = bboxes_toclass[i]
+            x, y, w, h = bboxes_todraw[i]
+            label = str(classes_det[class_ids[i]])
             confidence = confidences[i]
+            im = cv.getRectSubPix(frame, (w, h), (x, y))
+            tf1 = transforms.ToTensor()
+            tf2 = transforms.Resize((224, 224))
+            im = tf2(tf1(im))
+            
+            features = alexnet.features(im)
+            output = classifier(features)
+            prob = torch.nn.functional.softmax(output)
+            print(prob)
+            print(output)
+            _, predicted = torch.max(output.data, 1)
+            pred_label = classes_class[predicted.item()]
+            cv.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv.putText(frame, f"{pred_label} {prob[0][predicted.item()]:.2f}", (x1, y1 - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
-            cv.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv.putText(frame, f"{label} {confidence:.2f}", (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
-        cv.imshow('YOLO Object Detection', frame)
+        cv.imshow('YOLO Detection + Custom Classification', frame)
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
 
