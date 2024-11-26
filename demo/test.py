@@ -20,7 +20,7 @@ transform = transforms.Compose([
 if __name__ == "__main__":
     capture = open_video(1) # probably 0
     detection_model = YOLO(modelpath)
-    classifier = FCCNet()
+    classifier = CNNClassifierAlex()
     state = torch.load("./model_CNNA_bs128_lr0.001_epoch10", map_location=device, weights_only=True)
     classifier.load_state_dict(state)
     classifier.eval()
