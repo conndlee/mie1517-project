@@ -26,3 +26,17 @@ class FCCNet(nn.Module):
         x = self.fc2(x)
         return x
 
+class CNNClassifierAlex(nn.Module):
+    def __init__(self):
+        super(CNNClassifierAlex, self).__init__()
+        self.name = "CNNA"
+        self.conv1 = nn.Conv2d(256, 160, 5, padding = 2)
+        self.fc1 = nn.Linear(160 * 6 * 6, 100)
+        self.fc2 = nn.Linear(100, 3)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = x.view(-1, 160 * 6 * 6) #flatten feature data
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
