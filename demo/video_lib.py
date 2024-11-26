@@ -1,0 +1,7 @@
+
+
+# HELPER FUNCTIONS FOR VIDEO DEMO
+# Connor Lee
+
+
+
