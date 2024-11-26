@@ -18,7 +18,7 @@ transform = transforms.Compose([
     ])
 
 if __name__ == "__main__":
-    capture = open_video(1)
+    capture = open_video(1) # probably 0
     detection_model = YOLO(modelpath)
     classifier = FCCNet()
     state = torch.load("./model_FCClassifier_bs64_lr0.01_epoch14", map_location=device, weights_only=True)
