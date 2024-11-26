@@ -18,7 +18,7 @@ class FCCNet(nn.Module):
         super(FCCNet, self).__init__()
         self.name = "FCClassifier"
         self.fc1 = nn.Linear(256 * 6 * 6, 64)
-        self.fc2 = nn.Linear(64, 9)
+        self.fc2 = nn.Linear(64, 3)
 
     def forward(self, x):
         x = x.reshape(-1, 256 * 6 * 6)
