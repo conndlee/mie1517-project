@@ -5,6 +5,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
+from collections import deque
 from video_lib import *
 from ultralytics import YOLO
 
@@ -26,6 +27,9 @@ if __name__ == "__main__":
     classifier.eval()
     classifier.to(device)
     alexnet = torchvision.models.alexnet(pretrained=True).to(device)
+
+    past_predicted = deque(maxlen=5)
+    alpha = 0.001
 
     while 1:
         ret, frame = capture.read()
@@ -65,14 +69,19 @@ if __name__ == "__main__":
             tf1 = transforms.ToTensor()
             tf2 = transforms.Resize((224, 224))
             im = tf2(tf1(im))
-            
+
             features = alexnet.features(im)
             output = classifier(features)
             prob = torch.nn.functional.softmax(output)
-            print(prob)
             print(output)
-            _, predicted = torch.max(output.data, 1)
-            pred_label = classes_class[predicted.item()]
+            print(prob)
+            _, predicted = torch.max(output, 1)
+            past_predicted.append(predicted.item())
+            stable_pred = exponential_smoothing(past_predicted, alpha)[-1]
+            pred_label = classes_class[stable_pred]
+            print(past_predicted)
+            print(stable_pred)
+
             cv.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
             cv.putText(frame, f"{pred_label} {prob[0][predicted.item()]:.2f}", (x1, y1 - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 

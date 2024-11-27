@@ -40,3 +40,27 @@ class CNNClassifierAlex(nn.Module):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
+
+
+def exponential_smoothing(data, alpha):
+    """
+    Applies exponential smoothing to a time series of integers.
+
+    Parameters:
+    - data (list of int): The time series data to smooth.
+    - alpha (float): Smoothing factor (0 < alpha ≤ 1).
+
+    Returns:
+    - list of int: Smoothed time series, rounded to integers.
+    """
+    if not 0 < alpha <= 1:
+        raise ValueError("Alpha must be in the range (0, 1].")
+    if not data:
+        return []
+
+    smoothed = [data[0]]  # Initialize with the first value in the series
+    for t in range(1, len(data)):
+        smooth_value = alpha * data[t] + (1 - alpha) * smoothed[t - 1]
+        smoothed.append(round(smooth_value))  # Round to integer
+
+    return smoothed
