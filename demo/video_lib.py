@@ -39,9 +39,12 @@ class CNNClassifierAlex(nn.Module):
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
+        self.relu_conv1_out = x
         x = x.view(-1, 160 * 6 * 6) #flatten feature data
         x = F.relu(self.fc1(x))
+        self.relu_fc1_out = x
         x = self.fc2(x)
+        self.fc2_out = x
         return x
 
 

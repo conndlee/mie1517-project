@@ -26,7 +26,7 @@ if __name__ == "__main__":
     classifier.eval()
     classifier.to(device)
     alexnet = torchvision.models.alexnet(pretrained=True).to(device)
-    cap = cv.VideoCapture(1)
+    cap = cv.VideoCapture(0)
     if not cap.isOpened():
         print("Error: Unable to access the camera.")
 
@@ -77,8 +77,9 @@ if __name__ == "__main__":
                 confidence = confidences[i]
                 im = cv.getRectSubPix(frame, (w, h), (x, y))
 
-                input_tensor = preprocess(im).unsqueeze(0)
+                input_tensor = preprocess(im).unsqueeze(0).to(device)
                 features = alexnet.features(input_tensor)
+                features = features.to(device)
                 output = classifier(features)
 
                 target_layers = [
@@ -89,7 +90,7 @@ if __name__ == "__main__":
                                 #  "4", 
                                  "5", 
                                 #  "6", 
-                                 "7",
+                                #  "7",
                                 #  "8",
                                  "9",
                                 #  "10",
@@ -99,11 +100,20 @@ if __name__ == "__main__":
                 activations = get_activations(alexnet.features, input_tensor, target_layers,)
 
                 name = "alexnet"
-                display_activations(activations, name, window_size=(640,620))
+                display_activations(activations, name, window_size=(640,480))
                 name = "Classifier"
-                target_layers = ["conv1"]
+                target_layers = []
                 activations = get_activations(classifier, features, target_layers,)
-                display_activations(activations, name, window_size=(640,620))
+                activations["relu_conv1_out"] = classifier.relu_conv1_out
+                display_activations(activations, name, window_size=(640,480))
+                relu_fc1_activation = classifier.relu_fc1_out[0].detach().cpu().numpy()
+                relu_fc1_normalized = normalize_activation(relu_fc1_activation)
+                relu_fc1_flat = cv.resize(relu_fc1_normalized, (640, 240)) 
+                cv.imshow("ReLU Activations - fc1", relu_fc1_flat)
+
+                fc2_normalized = normalize_activation(output.detach().cpu().numpy())
+                fc2_flat = cv.resize(fc2_normalized, (640, 240)) 
+                cv.imshow("fc2", fc2_flat)
 
                 prob = torch.nn.functional.softmax(output)
                 print(output)

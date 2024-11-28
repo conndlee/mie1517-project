@@ -21,7 +21,7 @@ preprocess = transforms.Compose([
     ])
 
 if __name__ == "__main__":
-    capture = open_video(1) # probably 0
+    capture = open_video(0) # probably 0
     detection_model = YOLO(modelpath)
     classifier = CNNClassifierAlex()
     state = torch.load("./model_CNNA_bs128_lr0.001_epoch10", map_location=device, weights_only=True)
@@ -70,9 +70,10 @@ if __name__ == "__main__":
             im = cv.getRectSubPix(frame, (w, h), (x, y))
             tf1 = transforms.ToTensor()
             tf2 = transforms.Resize((224, 224))
-            im = preprocess(im)
+            im = preprocess(im).to(device)
 
             features = alexnet.features(im)
+            features = features.to(device)
             output = classifier(features)
             prob = torch.nn.functional.softmax(output)
             print(output)

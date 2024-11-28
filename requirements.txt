@@ -4,8 +4,7 @@ matplotlib
 seaborn
 scikit-learn
 tqdm
-opencv
-collections
+opencv-python
 torch
 torchvision
 ultralytics
