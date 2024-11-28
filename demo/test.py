@@ -20,8 +20,11 @@ preprocess = transforms.Compose([
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
+video_path = "./cris_test2.mp4"
+
 if __name__ == "__main__":
-    capture = open_video(0) # probably 0
+    # capture = open_video(0)
+    capture = open_video(video_path) 
     detection_model = YOLO(modelpath)
     classifier = CNNClassifierAlex()
     state = torch.load("./model_CNNA_bs128_lr0.001_epoch10", map_location=device, weights_only=True)
@@ -30,7 +33,7 @@ if __name__ == "__main__":
     classifier.to(device)
     alexnet = torchvision.models.alexnet(pretrained=True).to(device)
 
-    past_predicted = deque(maxlen=5)
+    past_predicted = deque(maxlen=10)
     alpha = 0.001
 
     while 1:
@@ -87,7 +90,7 @@ if __name__ == "__main__":
 
             cv.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
             cv.putText(frame, f"{pred_label} {prob[0][predicted.item()]:.2f}", (x1, y1 - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-
+            break
 
         cv.imshow('YOLO Detection + Custom Classification', frame)
         if cv.waitKey(1) & 0xFF == ord('q'):
