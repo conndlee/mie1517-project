@@ -13,9 +13,11 @@ classes_det = ["Human face"]
 classes_class = ["Glasses", "No Glasses", "Safety Glasses"]
 modelpath = './yolov5su_faces_best.pt'
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
+preprocess = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
 if __name__ == "__main__":
@@ -68,7 +70,7 @@ if __name__ == "__main__":
             im = cv.getRectSubPix(frame, (w, h), (x, y))
             tf1 = transforms.ToTensor()
             tf2 = transforms.Resize((224, 224))
-            im = tf2(tf1(im))
+            im = preprocess(im)
 
             features = alexnet.features(im)
             output = classifier(features)
