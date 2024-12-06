@@ -26,7 +26,7 @@ if __name__ == "__main__":
     classifier.eval()
     classifier.to(device)
     alexnet = torchvision.models.alexnet(pretrained=True).to(device)
-    cap = cv.VideoCapture(0)
+    cap = cv.VideoCapture(1)
     if not cap.isOpened():
         print("Error: Unable to access the camera.")
 
@@ -85,14 +85,14 @@ if __name__ == "__main__":
                 target_layers = [
                                 #  "0",
                                  "1", 
-                                 "2", 
+                                #  "2", 
                                 #  "3", 
                                 #  "4", 
-                                 "5", 
-                                #  "6", 
+                                #  "5", 
+                                 "6", 
                                 #  "7",
                                 #  "8",
-                                 "9",
+                                #  "9",
                                 #  "10",
                                 #  "11",
                                  "12",

@@ -6,8 +6,11 @@ import cv2 as cv
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision
+from torchvision.transforms.functional import gaussian_blur
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
 
 def open_video(n=0):
     capture = cv.VideoCapture(n)
@@ -46,6 +49,54 @@ class CNNClassifierAlex(nn.Module):
         x = self.fc2(x)
         self.fc2_out = x
         return x
+    
+class CNNA2(nn.Module):
+    def __init__(self):
+        super(CNNA2, self).__init__()
+        self.name = "CNNAintegrated"
+        self.alex  = torchvision.models.alexnet(pretrained=True).features
+        for module in self.alex:
+            if isinstance(module, nn.ReLU):
+                module.inplace = False
+        self.classifier = CNNClassifierAlex()
+
+    def forward(self, x):
+        x = self.alex(x)
+        # print(f"Output from alex: {x.shape}, requires_grad={x.requires_grad}")
+        x = F.relu(self.classifier.conv1(x))
+        self.relu_conv1_out = x
+        x = x.view(-1, 160 * 6 * 6) #flatten feature data
+        x = F.relu(self.classifier.fc1(x))
+        self.relu_fc1_out = x
+        x = self.classifier.fc2(x)
+        self.fc2_out = x
+        return x
+    
+def gradient_ascent_max(model, target_neuron, input_shape=(1, 256, 6, 6), steps=100, lr=0.1, regularization=True):
+
+    input_tensor = torch.randn(input_shape, requires_grad=True, device="cuda" if torch.cuda.is_available() else "cpu")
+    model.eval()
+    optimizer = torch.optim.Adam([input_tensor], lr=lr)
+
+    for step in range(steps):
+        optimizer.zero_grad()
+        output = model(input_tensor)
+
+        target_activation = output[0, target_neuron]
+
+        loss = -target_activation 
+        loss.backward()
+        optimizer.step()
+
+        if regularization:
+            with torch.no_grad():
+                input_tensor.clamp_(-1, 1) 
+                input_tensor.data = gaussian_blur(input_tensor.data, (3, 3))
+
+        if (step) % 50 == 0:
+            print(f"Step {step}/{steps}, Activation: {-loss.item()}")
+
+    return input_tensor.detach()
 
 
 def exponential_smoothing(data, alpha):
@@ -54,31 +105,28 @@ def exponential_smoothing(data, alpha):
     if not data:
         return []
 
-    smoothed = [data[0]]  # Initialize with the first value in the series
+    smoothed = [data[0]] 
     for t in range(1, len(data)):
         smooth_value = alpha * data[t] + (1 - alpha) * smoothed[t - 1]
-        smoothed.append(round(smooth_value))  # Round to integer
+        smoothed.append(round(smooth_value))  
 
     return smoothed
 
 def normalize_activation(activation):
-    activation -= activation.min()  # Shift values to be >= 0
-    activation /= (activation.max() + 1e-6)  # Scale values to [0, 1]
-    activation *= 255  # Scale to [0, 255]
+    activation -= activation.min() 
+    activation /= (activation.max() + 1e-6)  
+    activation *= 255  
     return activation.astype(np.uint8)
 
 def create_activation_grid(activation):
     num_filters = activation.shape[1]
     height, width = activation.shape[2], activation.shape[3]
 
-    # Determine grid size
     grid_cols = int(np.ceil(np.sqrt(num_filters)))
     grid_rows = int(np.ceil(num_filters / grid_cols))
 
-    # Create an empty grid
     grid_image = np.zeros((grid_rows * height, grid_cols * width), dtype=np.uint8)
 
-    # Populate the grid with each filter
     for i in range(num_filters):
         filter_img = normalize_activation(activation[0, i].detach().cpu().numpy())
         row = i // grid_cols

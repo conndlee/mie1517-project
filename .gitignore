@@ -163,3 +163,5 @@ progress_report.ipynb
 eyewear/
 runs/
 *.mp4
+*.jpg
+*.png 
